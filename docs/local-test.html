@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>포켓몬 가챠 · 로컬 테스트 v8.1</title>
+<style>
+
+:root{--pink:#ff2e93;--pink-2:#ff9bd0;--bg:#fff5fb;--ink:#222;--card-w:220px;--card-h:308px}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;font-family:system-ui,-apple-system,'Noto Sans KR',Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(circle at 20% 10%,#fff0f7,#fff5fb 60%),linear-gradient(180deg,#fff6fb,#ffeef8);color:var(--ink)}
+.wrapper{max-width:1200px;margin:0 auto;padding:20px}
+.card{background:#fff;border:1px solid #ffe3f2;border-radius:20px;padding:18px;box-shadow:0 20px 40px rgba(255,0,122,.06);margin:12px 0}
+.btn{border:0;background:var(--pink);color:#fff;font-weight:800;padding:12px 16px;border-radius:12px;cursor:pointer;box-shadow:0 10px 24px rgba(255,46,147,.25)}
+.btn.sm{padding:8px 12px}.btn.gray{background:#f3f3f5;color:#333;box-shadow:none}.btn.ghost{background:#fff;color:var(--pink);border:2px solid var(--pink)}
+.input{width:100%;border:1px solid #eaeaea;border-radius:10px;padding:10px 12px;font-size:14px}
+.hero{display:grid;grid-template-columns:1fr;gap:12px;justify-items:center}
+.machine{background:linear-gradient(180deg,#fff,#fff7fb);border:2px dashed #ffc2e1;border-radius:20px;padding:16px;width:100%}
+.slot-wrap{height:308px;display:flex;justify-content:center;align-items:center;overflow:hidden;position:relative}
+.slot{width:220px;height:308px;position:relative;transform-style:preserve-3d;perspective:1000px}
+.cardFace{position:absolute;inset:0;border-radius:16px;border:3px solid var(--pink-2);backface-visibility:hidden;box-shadow:0 12px 26px rgba(0,0,0,.09)}
+.cardBack{background:radial-gradient(circle at 30% 30%,#ffe3f2,#ffc2e1)}
+.cardFront{display:flex;align-items:center;justify-content:center;font-weight:900;font-size:44px;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.15);background:radial-gradient(circle at 50% 40%,#ffdff0,#ff9bd0 70%);border-color:var(--pink);transform:rotateY(180deg)}
+.slot.spin .cardFace{animation:spinFlip 800ms cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes spinFlip{0%{transform:rotateY(0)}50%{transform:rotateY(90deg)}100%{transform:rotateY(180deg)}}
+.result{margin-top:14px;text-align:center;font-size:28px;font-weight:900;color:var(--pink);text-shadow:0 1px 0 #fff;min-height:36px}
+.result.pop{animation:pop .45s ease}
+@keyframes pop{0%{transform:scale(.9);opacity:.5}70%{transform:scale(1.06);opacity:1}100%{transform:scale(1)}}
+.tag{display:inline-block;padding:2px 8px;border-radius:8px;font-size:12px;font-weight:700;border:1px solid #eee;background:#fff;color:#333;white-space:nowrap}
+.tag.c{border-color:#d5e0ff;color:#3d5afe}.tag.u{border-color:#d9ffd6;color:#2e7d32}.tag.r{border-color:#ffeaca;color:#ff6f00}
+.tag.rr{border-color:#ffd6eb;color:#ff2e93}.tag.rrr{border-color:#d1c4e9;color:#6a1b9a}.tag.ar{border-color:#c8e6c9;color:#1b5e20}
+.tag.sar{border-color:#ffe0b2;color:#e65100}.tag.grade{border-color:#b2ebf2;color:#006064}
+/* inventory layout (fixed): vertical list, no wrap, right-aligned counts */
+.inv-wrap{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.inv-card{border:1px solid #ffd6eb;border-radius:14px;padding:12px;background:#fff7fb}
+.inv-list{display:flex;flex-direction:column;gap:6px}
+.inv-item{display:flex;align-items:center;justify-content:space-between;gap:10px;white-space:nowrap}
+.inv-item .qty{font-size:12px;color:#666;flex:0 0 auto}
+.inv-total{margin-top:10px;font-weight:800;text-align:right}
+.inv-note{font-size:12px;color:#a33}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px}
+.modal.open{display:flex}
+.modal-card{background:#fff;border-radius:16px;max-width:720px;width:100%;padding:16px;border:1px solid #ffe3f2;box-shadow:0 24px 60px rgba(0,0,0,.15);max-height:90vh;overflow:auto}
+.small{font-size:13px;color:#666}
+
+.grid{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:18px;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <h2>포켓몬 가챠 · 로컬 테스트 v8.1</h2>
+
+  <section class="card" id="authSection">
+    <h3 style="margin:0">회원가입 / 로그인</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px">
+      <div>
+        <h4 style="margin:0 0 6px 0">회원가입</h4>
+        <div class="small">전화번호 인증(모의) → 아이디/비밀번호 설정</div>
+        <div style="display:grid;gap:8px;margin-top:8px">
+          <input id="suPhone" class="input" placeholder="전화번호 (010-1234-5678)"/>
+          <div style="display:flex;gap:8px">
+            <input id="suOtp" class="input" placeholder="인증코드 6자리"/>
+            <button class="btn sm gray" id="sendOtp">인증코드 받기(모의)</button>
+          </div>
+          <input id="suId" class="input" placeholder="아이디"/>
+          <input id="suPw" class="input" placeholder="비밀번호" type="password"/>
+          <button class="btn" id="signUp">회원가입 완료</button>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin:0 0 6px 0">로그인</h4>
+        <div class="small">아이디/비밀번호로 로그인</div>
+        <div style="display:grid;gap:8px;margin-top:8px">
+          <input id="liId" class="input" placeholder="아이디"/>
+          <input id="liPw" class="input" placeholder="비밀번호" type="password"/>
+          <button class="btn" id="login">로그인</button>
+        </div>
+      </div>
+    </div>
+    <div class="small" id="authMsg"></div>
+  </section>
+
+  <section id="app" style="display:none">
+    <div class="grid">
+      <section class="card hero">
+        <div class="machine">
+          <div class="slot-wrap">
+            <div class="slot" id="slot">
+              <div class="cardFace cardBack"></div>
+              <div class="cardFace cardFront"><span id="frontText">?</span></div>
+            </div>
+          </div>
+          <div class="result" id="result">결제(모의) 후 뽑기 시작!</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div>1회 <b>₩600</b> / 10회 <b>₩5,900</b></div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <button class="btn sm ghost" id="pay600">₩600 결제(모의) → 크레딧 +1</button>
+          <button class="btn sm gray" id="pay5900">₩5,900 결제(모의) → 크레딧 +10</button>
+          <button class="btn sm" id="draw" disabled>뽑기</button>
+          <div id="credit" class="small">크레딧 0회</div>
+        </div>
+        <div class="small">주문은 <b>10장 이상</b>부터, 배송비 <b>3,000원</b> 결제 후 자동 메일.</div>
+      </section>
+
+      <section class="card">
+        <h3 style="margin-top:0">보관함</h3>
+        <div class="inv-wrap">
+          <div class="inv-card">
+            <div class="small" style="margin-bottom:6px">일반</div>
+            <div class="inv-list" id="listCommon"></div>
+          </div>
+          <div class="inv-card">
+            <div class="small" style="margin-bottom:6px">희귀</div>
+            <div class="inv-list" id="listRare"></div>
+          </div>
+        </div>
+        <div class="inv-total" id="invTotal">총 0장</div>
+        <div class="inv-note" id="invNote">주문은 10장 이상부터 가능합니다.</div>
+        <hr>
+        <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+          <button class="btn sm" id="openOrder" disabled>주문서 작성하기</button>
+        </div>
+      </section>
+    </div>
+  </section>
+</div>
+
+<div class="modal" id="orderModal">
+  <div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <h3 style="margin:0">주문서 작성</h3>
+      <button class="btn sm gray" id="closeOrder">닫기</button>
+    </div>
+    <div class="small">배송비 3,000원 결제 완료 시, 주문서가 <b>자동 이메일</b>로 전송됩니다.</div>
+    <pre id="orderPreview" class="small" style="white-space:pre-wrap;background:#fafafa;border:1px solid #eee;border-radius:8px;padding:10px;margin-top:10px"></pre>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn sm ghost" id="payShip">배송비 ₩3,000 결제(모의)</button>
+      <button class="btn sm" id="confirmOrder" disabled>주문 확정(초기화)</button>
+    </div>
+  </div>
+</div>
+
+<div class="confetti" id="confetti"></div>
+
+<script>
+async function sha256(s){ const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join(''); }
+function rnd(n){ return Math.floor(Math.random()*n); }
+function fmt(t){ const z=n=>n.toString().padStart(2,'0'); return `${t.getFullYear()}-${z(t.getMonth()+1)}-${z(t.getDate())} ${z(t.getHours())}:${z(t.getMinutes())}:${z(t.getSeconds())}`; }
+function rarityTag(t){ const cls={'C':'c','U':'u','R':'r','RR':'rr','RRR':'rrr','AR':'ar','SAR':'sar'}[t]||'grade'; return `<span class="tag ${cls}">${t==='등급카드'?'등급카드':t}</span>`; }
+
+const USERS_KEY="poke_users_v8_1", STATE_PREFIX="poke_state_v8_1_";
+function loadUsers(){ try{return JSON.parse(localStorage.getItem(USERS_KEY)||'{}')}catch(e){return{}} }
+function saveUsers(o){ localStorage.setItem(USERS_KEY, JSON.stringify(o)); }
+function loadState(u){ try{return JSON.parse(localStorage.getItem(STATE_PREFIX+u)||'{"inv":{"C":0,"U":0,"R":0,"RR":0,"RRR":0,"AR":0,"SAR":0,"등급카드":0},"credit":0}')}catch(e){return{"inv":{"C":0,"U":0,"R":0,"RR":0,"RRR":0,"AR":0,"SAR":0,"등급카드":0},"credit":0}} }
+function saveState(u,s){ localStorage.setItem(STATE_PREFIX+u, JSON.stringify(s)); }
+
+let currentUser=null, state=null, _otp=null;
+document.getElementById('sendOtp').onclick=()=>{ _otp=(''+rnd(1_000_000)).padStart(6,'0'); alert('모의 인증코드: '+_otp); };
+document.getElementById('signUp').onclick=async()=>{
+  const phone=document.getElementById('suPhone').value.trim();
+  const otp=document.getElementById('suOtp').value.trim();
+  const id=document.getElementById('suId').value.trim();
+  const pw=document.getElementById('suPw').value;
+  const msg=document.getElementById('authMsg');
+  if(!phone||!otp||!id||!pw){ msg.textContent='모든 항목을 입력하세요.'; return; }
+  if(!_otp||otp!==_otp){ msg.textContent='인증코드가 올바르지 않습니다(모의).'; return; }
+  const users=loadUsers();
+  if(users[id]){ msg.textContent='이미 존재하는 아이디입니다.'; return; }
+  users[id]={ phone, passhash: await sha256(pw), verified:true };
+  saveUsers(users);
+  msg.textContent='회원가입 완료! 이제 로그인하세요.';
+};
+document.getElementById('login').onclick=async()=>{
+  const id=document.getElementById('liId').value.trim();
+  const pw=document.getElementById('liPw').value;
+  const users=loadUsers(), msg=document.getElementById('authMsg');
+  if(!users[id]){ msg.textContent='존재하지 않는 아이디입니다.'; return; }
+  if(users[id].passhash!== await sha256(pw)){ msg.textContent='비밀번호가 올바르지 않습니다.'; return; }
+  currentUser=id; state=loadState(id);
+  document.getElementById('authSection').style.display='none';
+  document.getElementById('app').style.display='block';
+  render(); updateCreditUI();
+};
+
+// permille weights: 217/216/217/200/50/70/22/8
+function pick(){
+  const r=Math.floor(Math.random()*1000);
+  if(r<217) return 'C';
+  if(r<217+216) return 'U';
+  if(r<217+216+217) return 'R';
+  if(r<650+200) return 'RR';
+  if(r<850+50) return 'AR';
+  if(r<900+70) return 'RRR';
+  if(r<970+22) return 'SAR';
+  return '등급카드';
+}
+
+const slot=document.getElementById('slot'), frontText=document.getElementById('frontText'), resultEl=document.getElementById('result');
+function confetti(){
+  const wrap=document.getElementById('confetti'); const colors=['#ff2e93','#ff9bd0','#ffd6eb','#f7b801','#7bd389','#6a1b9a','#00bcd4'];
+  for(let i=0;i<60;i++){ const p=document.createElement('i'); p.style.left=Math.random()*100+'vw'; p.style.background=colors[Math.floor(Math.random()*colors.length)]; p.style.animationDelay=(Math.random()*0.6)+'s'; p.style.transform=`translateY(-20px) rotate(${Math.floor(Math.random()*180)}deg)`; wrap.appendChild(p); setTimeout(()=>p.remove(),1400); }
+}
+function flipTo(t){
+  frontText.textContent=(t==='등급카드')?'G':t; slot.classList.add('spin');
+  setTimeout(()=>{ slot.classList.remove('spin'); resultEl.innerHTML=(t==='등급카드')?'등급카드':t; resultEl.classList.remove('pop'); void resultEl.offsetWidth; resultEl.classList.add('pop'); if(['RRR','AR','SAR','등급카드'].includes(t)) confetti(); state.inv[t]=(state.inv[t]||0)+1; saveState(currentUser,state); render(); },820);
+}
+function render(){
+  const commons=['C','U','R'], rares=['RR','RRR','AR','SAR','등급카드'];
+  document.getElementById('listCommon').innerHTML=commons.map(k=>`<div class="inv-item"><div>${rarityTag(k)}</div><div class="qty">${state.inv[k]||0}장</div></div>`).join('');
+  document.getElementById('listRare').innerHTML=rares.map(k=>`<div class="inv-item"><div>${rarityTag(k)}</div><div class="qty">${state.inv[k]||0}장</div></div>`).join('');
+  const total=Object.values(state.inv).reduce((a,b)=>a+b,0);
+  document.getElementById('invTotal').textContent=`총 ${total}장`;
+  const ok=total>=10; document.getElementById('invNote').textContent= ok?'주문 가능 상태입니다.':'주문은 10장 이상부터 가능합니다.';
+  document.getElementById('openOrder').disabled=!ok;
+}
+function updateCreditUI(){ document.getElementById('credit').textContent=`크레딧 ${state?state.credit:0}회`; document.getElementById('draw').disabled=!state||state.credit<=0; }
+document.getElementById('pay600').onclick=()=>{ state.credit=(state.credit||0)+1; saveState(currentUser,state); updateCreditUI(); };
+document.getElementById('pay5900').onclick=()=>{ state.credit=(state.credit||0)+10; saveState(currentUser,state); updateCreditUI(); };
+document.getElementById('draw').onclick=()=>{ if(!state||state.credit<=0) return; state.credit--; saveState(currentUser,state); updateCreditUI(); flipTo(pick()); };
+
+// Order modal (mock)
+const modal=document.getElementById('orderModal');
+function buildOrder(){
+  const items=Object.entries(state.inv).filter(([k,v])=>v>0).map(([k,v])=>`${k} x ${v}`).join(', ')||'없음';
+  const total=Object.values(state.inv).reduce((a,b)=>a+b,0);
+  return ['=== 포켓몬 카드 주문서 ===', `생성 시각: ${fmt(new Date())}`, '', `◆ 회원: ${currentUser}`, `◆ 품목: ${items}`, '', `◆ 합계: 카드 ${total}장 + 배송비 3,000원`].join('\n');
+}
+let shipPaid=false;
+document.getElementById('openOrder').onclick=()=>{ document.getElementById('orderPreview').textContent=buildOrder(); document.getElementById('confirmOrder').disabled=true; modal.classList.add('open'); };
+document.getElementById('closeOrder').onclick=()=> modal.classList.remove('open');
+document.getElementById('payShip').onclick=()=>{ shipPaid=true; alert('배송비 결제 완료(모의). 주문서 자동 이메일 전송됨.'); document.getElementById('confirmOrder').disabled=false; };
+document.getElementById('confirmOrder').onclick=()=>{ if(!shipPaid){ alert('배송비 결제 후 진행하세요.'); return; } for(const k in state.inv) state.inv[k]=0; saveState(currentUser,state); render(); modal.classList.remove('open'); shipPaid=false; alert('주문 확정 및 초기화 완료!'); };
+</script>
+</body>
+</html>
